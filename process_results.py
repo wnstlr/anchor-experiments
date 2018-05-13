@@ -184,7 +184,7 @@ def main():
         '-p', dest='pickle_folder',
         default='./out_pickles')
     parser.add_argument('-d', dest='dataset', required=True,
-                        choices=['adult', 'recidivism', 'lending'],
+                        choices=['adult', 'recidivism', 'lending', 'moons', 'circles', 'linear'],
                         help='dataset to use')
     parser.add_argument('-m', dest='model', required=True,
                         choices=['xgboost', 'logistic', 'nn'],

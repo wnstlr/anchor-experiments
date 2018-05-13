@@ -1,6 +1,9 @@
 import subprocess
-datasets = ['adult', 'lending', 'recidivism']
-models = ['xgboost', 'logistic', 'nn']
+#datasets = ['adult', 'lending', 'recidivism']
+#models = ['xgboost', 'logistic', 'nn']
+#out = 'out_pickles'
+datasets = ['moons']
+models = ['logistic']
 out = 'out_pickles'
 out_folder = 'results'
 for dataset in datasets:

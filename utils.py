@@ -189,6 +189,32 @@ def load_dataset(dataset_name, balance=False, discretize=True, dataset_folder='.
             categorical_features=categorical_features, discretize=discretize,
             filter_fn=filter_fn, balance=True)
         dataset.class_names = ['Good Loan', 'Bad Loan']
+
+    ### from our dataset demo
+    elif dataset_name == 'moons':
+        from sklearn.datasets import make_moons
+        X, y = make_moons(noise=0.3, random_state=0)
+        data = np.hstack((X, np.expand_dims(y, axis=1)))
+        np.savetxt('datasets/moons.csv', data, delimiter=',')
+        dataset = load_csv_dataset('moons.csv', 2, discretize=discretize)
+
+    elif dataset_name == 'circles':
+        from sklearn.datasets import make_circles
+        X, y = make_circles(noise=0.2, factor=0.5, random_state=1),
+        data = np.hstack((X, np.expand_dims(y, axis=1)))
+        np.savetxt('datasets/circles.csv', data, delimiter=',')
+        dataset = load_csv_dataset('circles.csv', 2, discretize=discretize)
+
+    elif dataset_name == 'linear':
+        from sklearn.datasets import make_classification
+        X, y = make_classification(n_features=2, n_redundant=0, n_informative=2,
+                                           random_state=1, n_clusters_per_class=1)
+        rng = np.random.RandomState(2)
+        X += 2 * rng.uniform(size=X.shape)
+        data = np.hstack((X, np.expand_dims(y, axis=1)))
+        np.savetxt('datasets/linear.csv', data, delimiter=',')
+        dataset = load_csv_dataset('linear.csv', 2, discretize=discretize)
+
     return dataset
 
 

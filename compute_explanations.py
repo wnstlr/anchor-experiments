@@ -11,7 +11,7 @@ import anchor_tabular
 def main():
     parser = argparse.ArgumentParser(description='Compute some explanations.')
     parser.add_argument('-d', dest='dataset', required=True,
-                        choices=['adult', 'recidivism', 'lending'],
+                        choices=['adult', 'recidivism', 'lending', 'moons', 'circles', 'linear'],
                         help='dataset to use')
     parser.add_argument('-e', dest='explainer', required=True,
                         choices=['lime', 'anchor'],

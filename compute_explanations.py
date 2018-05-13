@@ -17,8 +17,8 @@ def main():
                         choices=['lime', 'anchor'],
                         help='explainer, either anchor or lime')
     parser.add_argument('-m', dest='model', required=True,
-                        choices=['xgboost', 'logistic', 'nn'],
-                        help='model: xgboost, logistic or nn')
+                        choices=['xgboost', 'logistic', 'nn', 'svm'],
+                        help='model: xgboost, logistic, nn or svm')
     parser.add_argument('-c', dest='checkpoint', required=False,
                         default=200, type=int,
                         help='checkpoint after this many explanations')
@@ -46,7 +46,9 @@ def main():
     if args.model == 'nn':
         c = sklearn.neural_network.MLPClassifier(hidden_layer_sizes=(50,50))
         c.fit(explainer.encoder.transform(dataset.train), dataset.labels_train)
-
+    if args.model == 'svm':
+        c = sklearn.svm.SVC(gamma=2, C=1, probability=True)
+        c.fit(explainer.encoder.transform(dataset.train), dataset.labels_train)
 
     ret['encoder'] = explainer.encoder
     ret['model'] = c

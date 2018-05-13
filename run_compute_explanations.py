@@ -2,9 +2,9 @@ import subprocess
 #datasets = ['adult', 'recidivism', 'lending']
 #explainers = ['anchor', 'lime']
 #models = ['xgboost', 'logistic', 'nn']
-datasets = ['moons']
+datasets = ['moons', 'linear', 'circles']
 explainers = ['lime', 'anchor']
-models = [ 'logistic']
+models = [ 'svm']
 out = 'out_pickles'
 for dataset in datasets:
     for explainer in explainers:

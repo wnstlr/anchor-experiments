@@ -187,8 +187,8 @@ def main():
                         choices=['adult', 'recidivism', 'lending', 'moons', 'circles', 'linear'],
                         help='dataset to use')
     parser.add_argument('-m', dest='model', required=True,
-                        choices=['xgboost', 'logistic', 'nn'],
-                        help='model: xgboost, logistic or nn')
+                        choices=['xgboost', 'logistic', 'nn', 'svm'],
+                        help='model: xgboost, logistic, nn, or svm')
     parser.add_argument(
         '-o', dest='output_folder',
         default='./results')

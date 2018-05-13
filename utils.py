@@ -196,14 +196,14 @@ def load_dataset(dataset_name, balance=False, discretize=True, dataset_folder='.
         X, y = make_moons(noise=0.3, random_state=0)
         data = np.hstack((X, np.expand_dims(y, axis=1)))
         np.savetxt('datasets/moons.csv', data, delimiter=',')
-        dataset = load_csv_dataset('moons.csv', 2, discretize=discretize)
+        dataset = load_csv_dataset(os.path.join(dataset_folder, 'moons.csv'), 2, discretize=discretize)
 
     elif dataset_name == 'circles':
         from sklearn.datasets import make_circles
-        X, y = make_circles(noise=0.2, factor=0.5, random_state=1),
+        X, y = make_circles(noise=0.2, factor=0.5, random_state=1)
         data = np.hstack((X, np.expand_dims(y, axis=1)))
         np.savetxt('datasets/circles.csv', data, delimiter=',')
-        dataset = load_csv_dataset('circles.csv', 2, discretize=discretize)
+        dataset = load_csv_dataset(os.path.join(dataset_folder, 'circles.csv'), 2, discretize=discretize)
 
     elif dataset_name == 'linear':
         from sklearn.datasets import make_classification
@@ -213,7 +213,7 @@ def load_dataset(dataset_name, balance=False, discretize=True, dataset_folder='.
         X += 2 * rng.uniform(size=X.shape)
         data = np.hstack((X, np.expand_dims(y, axis=1)))
         np.savetxt('datasets/linear.csv', data, delimiter=',')
-        dataset = load_csv_dataset('linear.csv', 2, discretize=discretize)
+        dataset = load_csv_dataset(os.path.join(dataset_folder, 'linear.csv'), 2, discretize=discretize)
 
     return dataset
 

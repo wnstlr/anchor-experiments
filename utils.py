@@ -330,6 +330,7 @@ def load_csv_dataset(data, target_idx, delimiter=',',
     ret.test_idx = test_idx
     ret.validation_idx = cv_idx
     ret.train_idx = train_idx
+    ret.disc = disc
 
     # ret.train, ret.test, ret.labels_train, ret.labels_test = (
     #     sklearn.cross_validation.train_test_split(data, ret.labels,

@@ -4,8 +4,8 @@ import pickle
 import xgboost
 import sklearn
 import sklearn.neural_network
-import utils
-import anchor_tabular
+from . import utils
+from . import anchor_tabular
 
 
 def main():

@@ -4,7 +4,7 @@ import os
 import pickle
 import sklearn
 import numpy as np
-import utils
+import .utils
 
 
 def submodular_anchor_precrecall(z_anchor, dataset, preds_validation,

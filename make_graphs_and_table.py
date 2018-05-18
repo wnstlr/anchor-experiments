@@ -95,30 +95,19 @@ def make_table(pickles, datasets, models):
     return tab
 
 def make_csv_table(pickles, datasets, models):
-    tab =  'Precision table\n'
+    tab =  'Precision/Coverage table\n'
     explanations = ['anchor', 'lime_naive', 'lime_pred']
-    tab += 'Dataset, Model, '+ ', '.join(
-        [x.replace('_', '_') for x in explanations])
-    tab += '\n'
+    tab += 'Dataset,Explanation,Model,Precision,Coverage\n'
     for d in datasets:
-        for m in models:
-            tab += d + ','
-            tab += m + ','
-            #tab += ', '.join(['%.1f +- %.1f' % (pickles[d][m][e +'_1'][0] * 100, pickles[d][m][e +'_1'][2] * 100) for e in explanations]) # noqa
-            tab += ', '.join(['%.1f' % (pickles[d][m][e +'_1'][0] * 100) for e in explanations]) # noqa
-            tab += '\n'
-    tab += '\n'
-    tab += '\n'
-    tab += 'Coverage Table\n'
-    explanations = ['anchor', 'lime_naive', 'lime_pred']
-    tab += 'Dataset, Model, '+ ', '.join(
-        [x.replace('_', '_') for x in explanations])
-    for d in datasets:
-        for m in models:
-            tab += d + ','
-            tab += m + ','
-            tab += ', '.join(['%.1f' % (pickles[d][m][e +'_1'][1] * 100) for e in explanations]) # noqa
-            tab += '\n'
+        for e in explanations:
+            for m in models:
+                tab += d + ','
+                tab += e + ','
+                tab += m + ','
+                #tab += ', '.join(['%.1f +- %.1f' % (pickles[d][m][e +'_1'][0] * 100, pickles[d][m][e +'_1'][2] * 100) for e in explanations]) # noqa
+                #tab += ', '.join(['%.1f' % (pickles[d][m][e +'_1'][0] * 100) for e in explanations]) # noqa
+                tab += '%.3f,%.3f' % (pickles[d][m][e +'_1'][0], pickles[d][m][e +'_1'][1] ) # noqa
+                tab += '\n'
     tab += '\n'
     return tab
 
@@ -139,11 +128,11 @@ def main():
     tab = make_csv_table(pickles, datasets, models)
     print('Table:')
     print(tab)
-    for dataset in datasets:
-        for model in models:
-            path = os.path.join(args.graphs_folder, '%s-%s.png' %
-                                (dataset, model))
-            make_graph(pickles, dataset, model, save=path)
+    #for dataset in datasets:
+    #    for model in models:
+    #        path = os.path.join(args.graphs_folder, '%s-%s.png' %
+    #                            (dataset, model))
+    #        make_graph(pickles, dataset, model, save=path)
 
 
 if __name__ == '__main__':

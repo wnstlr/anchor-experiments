@@ -94,6 +94,34 @@ def make_table(pickles, datasets, models):
     tab += '\n\\end{tabular}\n\\caption{Coverage}\\end{table}'
     return tab
 
+def make_csv_table(pickles, datasets, models):
+    tab =  'Precision table\n'
+    explanations = ['anchor', 'lime_naive', 'lime_pred']
+    tab += 'Dataset, Model, '+ ', '.join(
+        [x.replace('_', '_') for x in explanations])
+    tab += '\n'
+    for d in datasets:
+        for m in models:
+            tab += d + ','
+            tab += m + ','
+            #tab += ', '.join(['%.1f +- %.1f' % (pickles[d][m][e +'_1'][0] * 100, pickles[d][m][e +'_1'][2] * 100) for e in explanations]) # noqa
+            tab += ', '.join(['%.1f' % (pickles[d][m][e +'_1'][0] * 100) for e in explanations]) # noqa
+            tab += '\n'
+    tab += '\n'
+    tab += '\n'
+    tab += 'Coverage Table\n'
+    explanations = ['anchor', 'lime_naive', 'lime_pred']
+    tab += 'Dataset, Model, '+ ', '.join(
+        [x.replace('_', '_') for x in explanations])
+    for d in datasets:
+        for m in models:
+            tab += d + ','
+            tab += m + ','
+            tab += ', '.join(['%.1f' % (pickles[d][m][e +'_1'][1] * 100) for e in explanations]) # noqa
+            tab += '\n'
+    tab += '\n'
+    return tab
+
 def main():
     parser = argparse.ArgumentParser(description='Graphs')
     parser.add_argument(
@@ -108,7 +136,7 @@ def main():
     models = ['logistic', 'xgboost', 'nn']
     pickles = load_pickles(datasets, models, args.results_folder)
     print('')
-    tab = make_table(pickles, datasets, models)
+    tab = make_csv_table(pickles, datasets, models)
     print('Table:')
     print(tab)
     for dataset in datasets:

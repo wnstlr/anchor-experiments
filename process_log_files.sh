@@ -1,0 +1,1 @@
+tail -n 1 result-* | sed 's/==> result-//g' | sed 's/\.log <==//g' | sed 's/-/ /g' | sed 's/\+\/[^,]*//g' | sed 's/Avg prec = //g' | sed 's/ , Avg coverage = /,/g' | sed 's/counterfactual high precision/counterfactual_high_precision/g' | sed 's/ /,/g' | sed '/^$/d' | sed 's/,$//g' | sed 's/$/,/g' | paste -s -d' \n' | sed 's/,$//g' | sed 's/ //g'

@@ -6,6 +6,8 @@ import sklearn
 import sklearn.neural_network
 import utils
 import anchor_tabular
+import numpy as np
+import warnings
 
 
 def main():
@@ -14,7 +16,7 @@ def main():
                         choices=['adult', 'recidivism', 'lending'],
                         help='dataset to use')
     parser.add_argument('-e', dest='explainer', required=True,
-                        choices=['lime', 'anchor', 'counterfactual'],
+                        choices=['lime', 'anchor', 'counterfactual', 'counterfactual-high-precision'],
                         help='explainer, either anchor or lime or counterfactual')
     parser.add_argument('-m', dest='model', required=True,
                         choices=['xgboost', 'logistic', 'nn'],
@@ -37,15 +39,26 @@ def main():
     explainer.fit(dataset.train, dataset.labels_train,
                   dataset.validation, dataset.labels_validation)
 
-    if args.model == 'xgboost':
-        c = xgboost.XGBClassifier(n_estimators=400, nthread=10, seed=1)
-        c.fit(explainer.encoder.transform(dataset.train), dataset.labels_train)
-    if args.model == 'logistic':
-        c = sklearn.linear_model.LogisticRegression()
-        c.fit(explainer.encoder.transform(dataset.train), dataset.labels_train)
-    if args.model == 'nn':
-        c = sklearn.neural_network.MLPClassifier(hidden_layer_sizes=(50,50))
-        c.fit(explainer.encoder.transform(dataset.train), dataset.labels_train)
+    #if 'counterfactual' in args.explainer:
+    if False:
+        #??? Models fitted fast enough that we don't need to load models from pickle
+        # Load classifier from other pickles
+        filename = os.path.join(
+            args.pickle_folder, '%s-anchor-%s' % (
+            args.dataset, args.model))
+        already_fitted_ret = pickle.load(open(filename))
+        c = already_fitted_ret['model']
+    else:
+        if args.model == 'xgboost':
+            c = xgboost.XGBClassifier(n_estimators=400, nthread=10, seed=1)
+            c.fit(explainer.encoder.transform(dataset.train), dataset.labels_train)
+        if args.model == 'logistic':
+            c = sklearn.linear_model.LogisticRegression()
+            c.fit(explainer.encoder.transform(dataset.train), dataset.labels_train)
+        if args.model == 'nn':
+            c = sklearn.neural_network.MLPClassifier(hidden_layer_sizes=(50,50))
+            c.fit(explainer.encoder.transform(dataset.train), dataset.labels_train)
+
 
 
     ret['encoder'] = explainer.encoder
@@ -80,20 +93,65 @@ def main():
     elif args.explainer == 'counterfactual':
         explain_fn = utils.get_reduced_explain_fn(
             explainer.explain_counterfactual, c.predict, 
+            threshold=0, max_manifolds=5
+        )
+    elif args.explainer == 'counterfactual-high-precision':
+        explain_fn = utils.get_reduced_explain_fn(
+            explainer.explain_counterfactual, c.predict, 
             threshold=threshold, max_manifolds=5
         )
 
     ret['exps'] = []
+    prec_vec = np.nan*np.ones(dataset.validation.shape[0])
+    coverage_vec = np.nan*np.ones(dataset.validation.shape[0])
     for i, d in enumerate(dataset.validation, start=1):
         # print(i)
         if i % 100 == 0:
             print(i)
         if i % args.checkpoint == 0:
             print('Checkpointing')
-            pickle.dump(ret, open(args.output + '.checkpoint', 'w'))
-        ret['exps'].append(explain_fn(d))
+            if 'counterfactual' not in args.explainer:
+                pickle.dump(ret, open(args.output + '.checkpoint', 'w'))
 
-    pickle.dump(ret, open(args.output, 'w'))
+        explanation = explain_fn(d)
+        if 'counterfactual' in args.explainer:
+            # Compute prec and recall immediately
+            X_test = dataset.test
+            y_pred_model = predict_fn(X_test)
+            y_pred = explanation.predict(X_test)
+            y_correct = 1 - np.abs(y_pred - y_pred_model)
+            
+            # Compute precision and coverage
+            if isinstance(y_pred, np.ma.MaskedArray):
+                n_correct = y_correct.sum()
+                n_retrieved = np.sum(~y_pred.mask) # Not masked == selected
+            else:
+                raise RuntimeError('y_pred should be masked')
+                n_correct = np.sum(y_correct)
+                n_retrieved = len(y_test)
+            n_total = len(y_pred_model)
+            if n_retrieved == 0:
+                prec = 1
+                coverage = 0
+            else:
+                prec = float(n_correct)/float(n_retrieved)
+                coverage = float(n_retrieved)/float(n_total)
+            prec_vec[i-1] = prec
+            coverage_vec[i-1] = coverage
+            print('i=%5d, prec = %.5f, rec = %.5f' % (i-1, prec, coverage))
+            
+        ret['exps'].append(explanation)
+
+    if 'counterfactual' not in args.explainer:
+        pickle.dump(ret, open(args.output, 'w'))
+    else:
+        print('WARNING: counterfactual explanations cannot be pickled giving prec directly')
+        prec_mean = np.mean(prec_vec)
+        coverage_mean = np.mean(coverage_vec)
+        prec_std = np.std(prec_vec)
+        coverage_std = np.std(coverage_vec)
+        print('Avg prec = %g +/- %g, Avg coverage = %g +/- %g' 
+              % (prec_mean, prec_std, coverage_mean, coverage_std))
 
 
 if __name__ == '__main__':

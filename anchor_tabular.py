@@ -267,6 +267,40 @@ class AnchorTabularExplainer(object):
         self.add_names_to_exp(data_row, exp, mapping)
         return exp
 
+    def explain_counterfactual(self, data_row, classifier_fn, threshold=0.95,
+                               desired_label=None,
+                               sample_whole_instances=True, 
+                               max_manifolds=5, **kwargs):
+        import sys, os
+        sys.path.append(os.path.join('..', 'counterfactual-explanation'))
+        from counterfactual.explainers import CounterfactualExplainer
+
+        def predict_fn(x):
+            return classifier_fn(self.encoder.transform(x))
+        # Don't need this since we have access to validation directly
+        #sample_fn, mapping = self.get_sample_fn(
+        #    data_row, classifier_fn, sample_whole_instances,
+        #    desired_label=desired_label)
+        # Call with sample_fn([], ...) for no conditions similar to LIME
+        # sample_fn([], ...)
+
+        X_val = self.validation
+        y_val = predict_fn(X_val)
+        explanation = CounterfactualExplainer(
+            max_manifolds=max_manifolds,
+            target_precision=threshold,
+            percent_within_bounds=1.0,
+            perturbation_bounds_algorithm='global',
+            normalize=None,
+            n_grid=100,
+        )
+        explanation.fit(
+            data_row.reshape(1, -1), y=None,
+            X_val=X_val, y_val=y_val,
+            predict_func=predict_fn,
+        )
+        return explanation
+
     def add_names_to_exp(self, data_row, hoeffding_exp, mapping):
         # TODO: precision recall is all wrong, coverage functions wont work
         # anymore due to ranges

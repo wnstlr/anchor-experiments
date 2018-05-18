@@ -14,8 +14,8 @@ def main():
                         choices=['adult', 'recidivism', 'lending'],
                         help='dataset to use')
     parser.add_argument('-e', dest='explainer', required=True,
-                        choices=['lime', 'anchor'],
-                        help='explainer, either anchor or lime')
+                        choices=['lime', 'anchor', 'counterfactual'],
+                        help='explainer, either anchor or lime or counterfactual')
     parser.add_argument('-m', dest='model', required=True,
                         choices=['xgboost', 'logistic', 'nn'],
                         help='model: xgboost, logistic or nn')
@@ -77,6 +77,11 @@ def main():
         explain_fn = utils.get_reduced_explain_fn(
             explainer.explain_lime, c.predict_proba, num_features=5,
             use_same_dist=True)
+    elif args.explainer == 'counterfactual':
+        explain_fn = utils.get_reduced_explain_fn(
+            explainer.explain_counterfactual, c.predict, 
+            threshold=threshold, max_manifolds=5
+        )
 
     ret['exps'] = []
     for i, d in enumerate(dataset.validation, start=1):

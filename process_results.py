@@ -59,7 +59,7 @@ def _project_counterfactual(centers, X_test, z_exp):
 
 
 def random_anchor_precrecall(z_anchor, dataset, preds_validation, preds_test,
-                             k, do_all=False):
+                             k, do_all=False, projection='none'):
     # returns (anchor_prec, anchor_rec, anchor_prec_std, anchor_rec_std)
     temp_prec_anchor = []
     temp_rec_anchor = []
@@ -73,13 +73,15 @@ def random_anchor_precrecall(z_anchor, dataset, preds_validation, preds_test,
         data_anchors = dataset.data[z_anchor['validation_idx']][exs]
         pred_anchors = preds_validation[exs]
 
-        X_test_proj, preds_test_proj = _project_counterfactual(
-            data_anchors, dataset.data[z_anchor['test_idx']], z_anchor)
+        X_test = dataset.data[z_anchor['test_idx']]
+        y_test = preds_test
+        if projection == 'counterfactual':
+            X_test, y_test = _project_counterfactual(
+                data_anchors, X_test, z_anchor)
 
         prec, rec = utils.evaluate_anchor(
             anchors, data_anchors, pred_anchors,
-            #dataset.data[z_anchor['test_idx']], preds_test,
-            X_test_proj, preds_test_proj,
+            X_test, y_test,
             threshold=1.1)
         n = preds_test.shape[0]
         temp_prec_anchor.append(prec)
@@ -163,7 +165,7 @@ def submodular_lime_precrecall(z_lime, dataset, preds_validation, preds_test,
 def random_lime_precrecall(
     z_lime, dataset, preds_validation, preds_test, k, desired_precision=0,
     to_change='distance', do_all=False, verbose=False,
-    threshold=0, pred_threshold=0.5):
+    threshold=0, pred_threshold=0.5, projection='none'):
     binary = np.bincount(preds_test).shape[0] <= 2
     all_ids = range(len(z_lime['exps']))
     if do_all:
@@ -175,13 +177,15 @@ def random_lime_precrecall(
     for picked in all_exs:
         exps = [z_lime['exps'][i] for i in picked]
         data_exps = dataset.data[z_lime['validation_idx']][picked]
-        # TODO Here ...
-        X_test_proj, preds_test_proj = _project_counterfactual(
-            data_exps, dataset.data[z_anchor['test_idx']], z_lime)
+
+        # Project counterfactual if requested
+        X_test = dataset.data[z_lime['test_idx']]
+        if projection == 'counterfactual':
+            X_test, _ = _project_counterfactual(
+                data_exps, X_test, z_lime)
 
         w, v = utils.compute_lime_weight_vals(
-            exps, data_exps, X_test_proj)
-            #exps, data_exps, dataset.data[z_lime['test_idx']])
+            exps, data_exps, X_test)
         ws.append(w)
         vs.append(v)
 
@@ -203,13 +207,16 @@ def random_lime_precrecall(
         for picked, w, v in zip(all_exs, ws, vs):
             preds_exps = preds_validation[picked]
 
-            data_exps = dataset.data[z_lime['validation_idx']][picked]
-            _, preds_test_proj = _project_counterfactual(
-                data_exps, dataset.data[z_anchor['test_idx']], z_lime)
+            # Project counterfactual if requested
+            y_test = preds_test
+            if projection == 'counterfactual':
+                data_exps = dataset.data[z_lime['validation_idx']][picked]
+                X_test = dataset.data[z_anchor['test_idx']]
+                _, y_test = _project_counterfactual(
+                    data_exps, X_test, z_lime)
+
             prec, rec = utils.evaluate_lime(
-                #TODO Here ...
-                #w, v, preds_exps, preds_test, threshold, pred_threshold,
-                w, v, preds_exps, preds_test_proj, threshold, pred_threshold,
+                w, v, preds_exps, y_test, threshold, pred_threshold,
                 binary=binary)
             temp_prec_lime.append(prec)
             temp_rec_lime.append(rec)
@@ -232,6 +239,11 @@ def main():
     parser.add_argument('-m', dest='model', required=True,
                         choices=['xgboost', 'logistic', 'nn'],
                         help='model: xgboost, logistic or nn')
+    parser.add_argument('-p', dest='projection', required=False,
+                        choices=['none', 'counterfactual'],
+                        default='none',
+                        help='Whether to project the test data onto a counterfactual '
+                        'manifold when evaluating')
     parser.add_argument(
         '-o', dest='output_folder',
         default='./results')
@@ -279,14 +291,16 @@ def main():
 
     print('Random anchor')
     (prec, cov, prec_std, cov_std) = random_anchor_precrecall(
-        z_anchor, dataset, preds_validation, preds_test, 1, do_all=True)
+        z_anchor, dataset, preds_validation, preds_test, 1, do_all=True,
+        projection=args.projection)
     ret['anchor_1'] = (prec, cov, prec_std, cov_std)
 
     print('Random lime')
     (prec, cov, prec_std, cov_std, _, _) = random_lime_precrecall(
         z_lime, dataset, preds_validation, preds_test, k=1,
         desired_precision=0.0, to_change='distance', verbose=True,
-        do_all=True)
+        do_all=True,
+        projection=args.projection)
     ret['lime_naive_1'] = (prec, cov, prec_std, cov_std)
 
     # print('Distance random lime')
@@ -301,7 +315,9 @@ def main():
     (prec, cov, prec_std, cov_std, t1, t2) = random_lime_precrecall(
         z_lime, dataset, preds_validation, preds_test, k=1,
         desired_precision=0.0, to_change='pred', verbose=True,
-        do_all=True, pred_threshold=ret['lime_pred_submodular_threshold'])
+        do_all=True, pred_threshold=ret['lime_pred_submodular_threshold'],
+        projection=args.projection
+    )
     ret['lime_pred_1'] = (prec, cov, prec_std, cov_std)
     ret['lime_pred_1_threshold'] = t2
 

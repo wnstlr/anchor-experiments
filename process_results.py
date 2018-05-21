@@ -5,7 +5,10 @@ import pickle
 import sklearn
 import numpy as np
 import utils
+import sys
 
+sys.path.append(os.path.join('..', 'counterfactual-explanation'))
+from counterfactual.explainers import CounterfactualExplainer
 
 def submodular_anchor_precrecall(z_anchor, dataset, preds_validation,
                                  preds_test, k):
@@ -31,6 +34,30 @@ def submodular_anchor_precrecall(z_anchor, dataset, preds_validation,
     return picked, precs, recs
 
 
+def _project_counterfactual(centers, X_test, z_exp):
+    # Counterfactual projection
+    X_test = dataset.data[z_exp['test_idx']]
+    counterfactual_explainer = CounterfactualExplainer(
+        manifold_algorithm='all', # Use all manifolds
+        percent_within_bounds=1.0, # Includes normal amount as in ours
+        target_precision=0, # Should ignore perturbation bounds
+        perturbation_bounds_algorithm='global', # Should be ignored
+        normalize=None, # Normalize is false like in ours
+    )
+    counterfactual_explainer.fit(
+        centers, y=None, predict_func=lambda x: x, # just a dummy function
+        X_val=dataset.validation, # Must pass in validation data to get same bounds
+        y_val=dataset.labels_validation,
+    )
+    X_test_proj = counterfactual_explainer._project(X_test)
+    preds_test_proj = z_exp['model'].predict(
+        z_exp['encoder'].transform(
+            X_test_proj
+        )
+    )
+    return X_test_proj, preds_test_proj
+
+
 def random_anchor_precrecall(z_anchor, dataset, preds_validation, preds_test,
                              k, do_all=False):
     # returns (anchor_prec, anchor_rec, anchor_prec_std, anchor_rec_std)
@@ -45,9 +72,14 @@ def random_anchor_precrecall(z_anchor, dataset, preds_validation, preds_test,
         anchors = [z_anchor['exps'][i] for i in exs]
         data_anchors = dataset.data[z_anchor['validation_idx']][exs]
         pred_anchors = preds_validation[exs]
+
+        X_test_proj, preds_test_proj = _project_counterfactual(
+            data_anchors, dataset.data[z_anchor['test_idx']], z_anchor)
+
         prec, rec = utils.evaluate_anchor(
             anchors, data_anchors, pred_anchors,
-            dataset.data[z_anchor['test_idx']], preds_test,
+            #dataset.data[z_anchor['test_idx']], preds_test,
+            X_test_proj, preds_test_proj,
             threshold=1.1)
         n = preds_test.shape[0]
         temp_prec_anchor.append(prec)
@@ -143,8 +175,13 @@ def random_lime_precrecall(
     for picked in all_exs:
         exps = [z_lime['exps'][i] for i in picked]
         data_exps = dataset.data[z_lime['validation_idx']][picked]
+        # TODO Here ...
+        X_test_proj, preds_test_proj = _project_counterfactual(
+            data_exps, dataset.data[z_anchor['test_idx']], z_lime)
+
         w, v = utils.compute_lime_weight_vals(
-            exps, data_exps, dataset.data[z_lime['test_idx']])
+            exps, data_exps, X_test_proj)
+            #exps, data_exps, dataset.data[z_lime['test_idx']])
         ws.append(w)
         vs.append(v)
 
@@ -165,8 +202,14 @@ def random_lime_precrecall(
 
         for picked, w, v in zip(all_exs, ws, vs):
             preds_exps = preds_validation[picked]
+
+            data_exps = dataset.data[z_lime['validation_idx']][picked]
+            _, preds_test_proj = _project_counterfactual(
+                data_exps, dataset.data[z_anchor['test_idx']], z_lime)
             prec, rec = utils.evaluate_lime(
-                w, v, preds_exps, preds_test, threshold, pred_threshold,
+                #TODO Here ...
+                #w, v, preds_exps, preds_test, threshold, pred_threshold,
+                w, v, preds_exps, preds_test_proj, threshold, pred_threshold,
                 binary=binary)
             temp_prec_lime.append(prec)
             temp_rec_lime.append(rec)

@@ -1,4 +1,5 @@
 from __future__ import print_function
+import os, sys
 import argparse
 import pickle
 import xgboost
@@ -44,7 +45,7 @@ def main():
         #??? Models fitted fast enough that we don't need to load models from pickle
         # Load classifier from other pickles
         filename = os.path.join(
-            args.pickle_folder, '%s-anchor-%s' % (
+            'out_pickles', '%s-anchor-%s' % (
             args.dataset, args.model))
         already_fitted_ret = pickle.load(open(filename))
         c = already_fitted_ret['model']
@@ -117,7 +118,15 @@ def main():
         if 'counterfactual' in args.explainer:
             # Compute prec and recall immediately
             X_test = dataset.test
-            y_pred_model = predict_fn(X_test)
+
+            # Save original manifolds and reset to all
+            orig_manifold_idx = explanation.selected_manifold_idx_
+            explanation.selected_manifold_idx_ = np.arange(X_test.shape[1])
+            X_test_proj, _ = explanation._project(X_test)  # Ignore selected_idx output of this function
+            explanation.selected_manifold_idx_ = orig_manifold_idx
+
+            # Predict on projection
+            y_pred_model = predict_fn(X_test_proj)
             y_pred = explanation.predict(X_test)
             y_correct = 1 - np.abs(y_pred - y_pred_model)
             

@@ -25,6 +25,12 @@ def main():
     parser.add_argument('-c', dest='checkpoint', required=False,
                         default=200, type=int,
                         help='checkpoint after this many explanations')
+    parser.add_argument('-p', dest='projection', required=False,
+                        choices=['none', 'counterfactual'],
+                        default='none',
+                        help='Whether to project the data onto a counterfactual '
+                        'manifold when evaluating (ONLY for explainers "counterfactual" '
+                        'and "counterfactual-high-precision")')
     parser.add_argument('-o', dest='output', required=True)
 
     args = parser.parse_args()
@@ -119,14 +125,17 @@ def main():
             # Compute prec and recall immediately
             X_test = dataset.test
 
-            # Save original manifolds and reset to all
-            orig_manifold_idx = explanation.selected_manifold_idx_
-            explanation.selected_manifold_idx_ = np.arange(X_test.shape[1])
-            X_test_proj, _ = explanation._project(X_test)  # Ignore selected_idx output of this function
-            explanation.selected_manifold_idx_ = orig_manifold_idx
+            if args.projection == 'counterfactual':
+                # Save original manifolds and reset to all so projection is onto all manifolds
+                orig_manifold_idx = explanation.selected_manifold_idx_
+                explanation.selected_manifold_idx_ = np.arange(X_test.shape[1])
+                X_test, _ = explanation._project(X_test)  # Ignore selected_idx output of this function
+                explanation.selected_manifold_idx_ = orig_manifold_idx  # Reset original manifold_idx
+            else:
+                # Do not do any projection of X_test
+                pass
 
-            # Predict on projection
-            y_pred_model = predict_fn(X_test_proj)
+            y_pred_model = predict_fn(X_test)
             y_pred = explanation.predict(X_test)
             y_correct = 1 - np.abs(y_pred - y_pred_model)
             

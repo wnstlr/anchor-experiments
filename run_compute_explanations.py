@@ -9,7 +9,7 @@ for dataset in datasets:
     for explainer in explainers:
         for model in models:
             #outfile = '/tmp/%s-%s-%s.log' % (dataset, explainer, model)
-            outfile = 'fixed-result-%s-%s-%s.log' % (dataset, explainer, model)
+            outfile = 'fixed2-result-%s-%s-%s.log' % (dataset, explainer, model)
             print 'Outfile:', outfile
             outfile = open(outfile, 'w', 0)
             cmd = 'python compute_explanations.py -d %s -e %s -m %s --projection %s -o %s ' % (

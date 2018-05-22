@@ -188,7 +188,7 @@ def random_lime_precrecall(
             y_test = preds_test
             if projection == 'counterfactual':
                 data_exps = dataset.data[z_lime['validation_idx']][picked]
-                X_test = dataset.data[z_anchor['test_idx']]
+                X_test = dataset.data[z_lime['test_idx']]
                 _, y_test = _result_project_counterfactual(
                     data_exps, X_test, z_lime)
 

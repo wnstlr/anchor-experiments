@@ -12,7 +12,7 @@ for dataset in datasets:
             outfile = 'fixed-result-%s-%s-%s.log' % (dataset, explainer, model)
             print 'Outfile:', outfile
             outfile = open(outfile, 'w', 0)
-            cmd = 'python compute_explanations.py -d %s -e %s -m %s -p %s -o %s ' % (
+            cmd = 'python compute_explanations.py -d %s -e %s -m %s --projection %s -o %s ' % (
                 dataset, explainer, model, projection,
                 '%s/%s-%s-%s' % (out, dataset, explainer, model))
             print cmd

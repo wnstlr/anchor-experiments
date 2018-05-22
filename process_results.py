@@ -7,8 +7,9 @@ import numpy as np
 import utils
 import sys
 
-sys.path.append(os.path.join('..', 'counterfactual-explanation'))
-from counterfactual.explainers import CounterfactualExplainer
+def _result_project_counterfactual(centers, X, z_exp):
+    return utils._project_counterfactual(centers, X, z_exp['model'], z_exp['encoder'])
+
 
 def submodular_anchor_precrecall(z_anchor, dataset, preds_validation,
                                  preds_test, k):
@@ -34,30 +35,6 @@ def submodular_anchor_precrecall(z_anchor, dataset, preds_validation,
     return picked, precs, recs
 
 
-def _project_counterfactual(centers, X_test, z_exp):
-    # Counterfactual projection
-    X_test = dataset.data[z_exp['test_idx']]
-    counterfactual_explainer = CounterfactualExplainer(
-        manifold_algorithm='all', # Use all manifolds
-        percent_within_bounds=1.0, # Includes normal amount as in ours
-        target_precision=0, # Should ignore perturbation bounds
-        perturbation_bounds_algorithm='global', # Should be ignored
-        normalize=None, # Normalize is false like in ours
-    )
-    counterfactual_explainer.fit(
-        centers, y=None, predict_func=lambda x: x, # just a dummy function
-        X_val=dataset.validation, # Must pass in validation data to get same bounds
-        y_val=dataset.labels_validation,
-    )
-    X_test_proj = counterfactual_explainer._project(X_test)
-    preds_test_proj = z_exp['model'].predict(
-        z_exp['encoder'].transform(
-            X_test_proj
-        )
-    )
-    return X_test_proj, preds_test_proj
-
-
 def random_anchor_precrecall(z_anchor, dataset, preds_validation, preds_test,
                              k, do_all=False, projection='none'):
     # returns (anchor_prec, anchor_rec, anchor_prec_std, anchor_rec_std)
@@ -76,7 +53,7 @@ def random_anchor_precrecall(z_anchor, dataset, preds_validation, preds_test,
         X_test = dataset.data[z_anchor['test_idx']]
         y_test = preds_test
         if projection == 'counterfactual':
-            X_test, y_test = _project_counterfactual(
+            X_test, y_test = _result_project_counterfactual(
                 data_anchors, X_test, z_anchor)
 
         prec, rec = utils.evaluate_anchor(
@@ -181,7 +158,7 @@ def random_lime_precrecall(
         # Project counterfactual if requested
         X_test = dataset.data[z_lime['test_idx']]
         if projection == 'counterfactual':
-            X_test, _ = _project_counterfactual(
+            X_test, _ = _result_project_counterfactual(
                 data_exps, X_test, z_lime)
 
         w, v = utils.compute_lime_weight_vals(
@@ -212,7 +189,7 @@ def random_lime_precrecall(
             if projection == 'counterfactual':
                 data_exps = dataset.data[z_lime['validation_idx']][picked]
                 X_test = dataset.data[z_anchor['test_idx']]
-                _, y_test = _project_counterfactual(
+                _, y_test = _result_project_counterfactual(
                     data_exps, X_test, z_lime)
 
             prec, rec = utils.evaluate_lime(
@@ -239,7 +216,7 @@ def main():
     parser.add_argument('-m', dest='model', required=True,
                         choices=['xgboost', 'logistic', 'nn'],
                         help='model: xgboost, logistic or nn')
-    parser.add_argument('-p', dest='projection', required=False,
+    parser.add_argument('--projection', dest='projection', required=False,
                         choices=['none', 'counterfactual'],
                         default='none',
                         help='Whether to project the test data onto a counterfactual '

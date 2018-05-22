@@ -10,6 +10,9 @@ import sys
 import lime
 import lime.lime_tabular
 
+sys.path.append(os.path.join('..', 'counterfactual-explanation'))
+from counterfactual.explainers import CounterfactualExplainer
+
 if (sys.version_info > (3, 0)):
     def unicode(s, errors=None):
         return s#str(s)
@@ -522,3 +525,25 @@ def evaluate_lime(weights, vals, explanation_preds, predictions, threshold, pred
         return 1, 0
     # precision, support
     return predicted_right / predicted, predicted / n
+
+
+def _project_counterfactual(centers, X, model, encoder):
+    # Counterfactual projection
+    counterfactual_explainer = CounterfactualExplainer(
+        manifold_algorithm='all', # Use all manifolds
+        percent_within_bounds=1.0, # Includes normal amount as in ours
+        target_precision=0, # Should ignore perturbation bounds
+        perturbation_bounds_algorithm='global', # Should be ignored
+        normalize=None, # Normalize is false like in ours
+    )
+    counterfactual_explainer.fit(
+        centers, y=None, 
+        predict_func=lambda x: x, # just a dummy function
+        X_val=X,
+        y_val=np.zeros(X.shape[0]),
+    )
+
+    # Project and get predictions from model
+    X_proj, _ = counterfactual_explainer._project(X)  # Ignore selection
+    y_proj = model.predict(encoder.transform(X_proj))
+    return X_proj, y_proj
